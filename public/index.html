@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Togetherly</title>
+<style>
+  :root{
+    --night:#1A1216; --ember:#241A20; --lift:#31232B;
+    --line:rgba(246,237,230,.10); --cream:#F6EDE6; --haze:#A6919B;
+    --a:#F2B45C; --b:#E48FA7; --glow:#FFD9A8; --sage:#8FBFA3;
+    --display:"Iowan Old Style","Palatino Linotype",Palatino,"Hoefler Text",Georgia,serif;
+    --body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--night);color:var(--cream);
+    font-family:var(--body);-webkit-font-smoothing:antialiased}
+  #app{max-width:440px;margin:0 auto;padding:30px 20px 120px;min-height:100vh}
+  h1{font:400 30px/1.15 var(--display);margin:12px 0 20px}
+  h2{font:400 29px/1.25 var(--display);margin:16px 0 0}
+  h3{font:400 22px/1.3 var(--display);margin:10px 0 8px}
+  p{margin:0;font:400 15px/1.6 var(--body);color:var(--haze)}
+  .eyebrow{font:500 11px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--haze)}
+  .card{background:var(--ember);border:1px solid var(--line);border-radius:22px;padding:20px;margin-bottom:14px}
+  .btn{display:block;width:100%;border:none;border-radius:16px;padding:16px 20px;
+    font:600 16px var(--body);background:var(--glow);color:#2A1A14;cursor:pointer;margin-top:12px;
+    transition:transform .18s cubic-bezier(.22,.61,.36,1),opacity .2s}
+  .btn:active{transform:scale(.97)}
+  .btn[disabled]{opacity:.35;pointer-events:none}
+  .btn.quiet{background:rgba(246,237,230,.07);color:var(--cream);border:1px solid var(--line)}
+  .btn.ghost{background:none;color:var(--haze)}
+  input[type=text],textarea{font:inherit;width:100%;color:var(--cream);
+    background:rgba(246,237,230,.05);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  input::placeholder,textarea::placeholder{color:#7E6A73}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:48px;background:transparent;margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:12px;border-radius:999px;
+    background:linear-gradient(90deg,var(--tgc) 0 var(--tgp),rgba(246,237,230,.09) var(--tgp) 100%)}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;height:30px;width:30px;border:0;border-radius:999px;
+    background:var(--cream);margin-top:-9px;box-shadow:0 0 0 6px rgba(255,217,168,.13),0 6px 18px rgba(0,0,0,.45)}
+  input[type=range]::-moz-range-track{height:12px;border-radius:999px;background:rgba(246,237,230,.09)}
+  input[type=range]::-moz-range-progress{height:12px;border-radius:999px;background:var(--tgc)}
+  input[type=range]::-moz-range-thumb{height:30px;width:30px;border:0;border-radius:999px;background:var(--cream)}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--glow);outline-offset:4px}
+  .rise{animation:rise .5s cubic-bezier(.22,.61,.36,1) both}
+  .fade{animation:fade .6s ease both}
+  .breathe{animation:breathe 3.4s ease-in-out infinite}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+  .floaty{animation:floaty 4.2s ease-in-out infinite}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+  @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  .tabs{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center}
+  .tabs>div{width:100%;max-width:440px;display:flex;background:rgba(26,18,22,.9);
+    -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);border-top:1px solid var(--line);
+    padding:10px 8px calc(14px + env(safe-area-inset-bottom))}
+  .tabs button{flex:1;background:none;border:none;cursor:pointer;display:grid;justify-items:center;gap:5px;
+    padding:4px 0;color:var(--haze);position:relative}
+  .tabs button.on{color:var(--glow)}
+  .tabs span{font:500 10px var(--mono);letter-spacing:.06em;text-transform:uppercase}
+  .dot{position:absolute;top:0;right:30%;width:7px;height:7px;border-radius:99px;background:var(--b)}
+  .row{display:flex;align-items:center;gap:12px}
+  .track{flex:1;height:7px;border-radius:99px;background:rgba(246,237,230,.08);overflow:hidden}
+  .track i{display:block;height:100%;border-radius:99px;transition:width .8s cubic-bezier(.22,.61,.36,1)}
+  .num{font:500 13px var(--mono);color:var(--haze)}
+  .ticks{display:flex;gap:5px;flex:1}
+  .ticks i{flex:1;height:3px;border-radius:99px;background:rgba(246,237,230,.12);transition:background .35s}
+  .center{text-align:center}
+  .quote{border-left:2px solid;padding-left:14px;margin-bottom:16px}
+  .quote b{display:block;font:500 12px var(--mono);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+  .quote em{font:400 16px/1.6 var(--display);font-style:normal;color:var(--cream)}
+  .step{display:flex;gap:10px;margin-bottom:8px}
+  .step i{width:6px;height:6px;border-radius:99px;background:var(--glow);margin-top:8px;flex:none}
+  .step div{color:var(--haze);font:400 15px/1.55 var(--body)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="tabs" id="tabs" hidden></div>
+
+<script>
+/* ------------------------------------------------------------ content */
+const DIMS=[
+ {k:'communication',label:'Communication',short:'Comms',q:'How heard did you feel this week?'},
+ {k:'qualityTime',label:'Quality time',short:'Time',q:'Did the time together feel like time together?'},
+ {k:'trust',label:'Trust',short:'Trust',q:'How safe did it feel to be honest?'},
+ {k:'intimacy',label:'Intimacy',short:'Closeness',q:'How close did you feel — physically and otherwise?'},
+ {k:'teamwork',label:'Teamwork',short:'Team',q:'Did the load feel shared?'},
+ {k:'conflict',label:'Conflict & repair',short:'Repair',q:'When things got tense, how well did you find your way back?'},
+ {k:'finances',label:'Finances',short:'Money',q:'How settled did money feel between you?'},
+ {k:'wellbeing',label:'Individual wellbeing',short:'Self',q:'And how were you, in yourself?'}];
+
+const STEPS={
+ communication:['Take fifteen minutes with phones in another room. One talks for five, the other only listens, then says back what they heard.','Name the thing you sat on this week. Open with "Something I didn\'t say was…"'],
+ qualityTime:['Put one hour in both calendars before Sunday and protect it like a work meeting.','Do something that isn\'t a screen or a meal — a walk, a drive, cooking together.'],
+ trust:['Say one thing out loud you\'d normally keep to yourself. Let it land without fixing it.','Keep one small promise this week, and say when you\'ve done it.'],
+ intimacy:['Ask what kind of closeness they\'ve been missing. Physical isn\'t always the answer.','Six seconds when you say goodbye in the morning. It\'s hard to stay distant after one.'],
+ teamwork:['Each write down everything you did this week without being asked, then read them to each other.','Pick the chore that causes the most friction and swap it for a fortnight.'],
+ conflict:['Revisit the last argument while calm — not to relitigate it, but to agree how you\'d rather do it next time.','Agree a pause word either of you can use, and what happens in the twenty minutes after it.'],
+ finances:['Twenty minutes with the actual numbers on the table. No decisions, just looking together.','Each name one money worry you haven\'t said aloud yet.'],
+ wellbeing:['Ask what would make next week ten percent lighter, then take one thing off their plate.','Two hours each, this week, for something that is nobody else\'s.']};
+
+/* ------------------------------------------------------------ boo */
+const STATS=[
+ {k:'energy',label:'Energy',lo:'Running on empty',hi:'Full tank'},
+ {k:'mood',label:'Mood',lo:'Heavy',hi:'Light'},
+ {k:'closeness',label:'Closeness',lo:'Feeling distant',hi:'Right here with you'},
+ {k:'capacity',label:'Capacity for us',lo:'Nothing spare',hi:'Plenty to give'}];
+
+const NEEDS=[
+ {k:'space',label:'Space',move:'Leave me a room and forty minutes. Costs you nothing, gives back everything.'},
+ {k:'affection',label:'Affection',move:'Sit closer than strictly necessary. No agenda.'},
+ {k:'talk',label:'To talk',move:'Ask one real question, then be quiet long enough for the answer.'},
+ {k:'help',label:'Practical help',move:'Take one thing off the list without asking which one.'},
+ {k:'laugh',label:'A laugh',move:'Send me something stupid. Low effort, high return.'},
+ {k:'company',label:'Just company',move:'Same room, separate things. That is the whole ask.'}];
+
+function booType(s,stale){
+  if(stale)return {k:'asleep',label:'Dozing',blurb:'No word for a while.'};
+  if(s.energy>=8&&s.mood>=7)return {k:'radiant',label:'Radiant',blurb:'Full of it, in the good way.'};
+  if(s.mood<=3)return {k:'heavy',label:'Heavy',blurb:'Carrying something.'};
+  if(s.energy<=3)return {k:'depleted',label:'Depleted',blurb:'Tank is empty.'};
+  if(s.closeness<=4)return {k:'drifting',label:'Drifting',blurb:'Here, but a bit far away.'};
+  if(s.capacity<=3)return {k:'stretched',label:'Stretched',blurb:'Giving more than there is.'};
+  return {k:'steady',label:'Steady',blurb:'Nothing dramatic. That counts.'};
+}
+const booHP=s=>Math.round(((s.energy+s.mood+s.closeness+s.capacity)/4)*10);
+
+/* ------------------------------------------------------------ api */
+const TOKEN='togetherly.token';
+const tokenGet=()=>{try{return localStorage.getItem(TOKEN)||null}catch(e){return null}};
+const tokenSet=t=>{try{t?localStorage.setItem(TOKEN,t):localStorage.removeItem(TOKEN)}catch(e){}};
+const tzNow=()=>new Date().getTimezoneOffset();
+
+async function api(path,method,body){
+  const h={};
+  const tk=tokenGet();if(tk)h.authorization='Bearer '+tk;
+  if(body)h['content-type']='application/json';
+  const r=await fetch('/api'+path,{method:method||'GET',headers:h,
+    body:body?JSON.stringify(body):undefined});
+  let d=null;try{d=await r.json()}catch(e){}
+  if(!r.ok){
+    const err=new Error((d&&d.error)||('Request failed ('+r.status+')'));
+    err.status=r.status;throw err;
+  }
+  return d;
+}
+
+/* ------------------------------------------------------------ helpers */
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function mondayOf(d){const t=new Date(d);t.setDate(t.getDate()-((t.getDay()+6)%7));t.setHours(0,0,0,0);return t}
+function wid(d){const m=mondayOf(d||new Date());
+  return m.getFullYear()+'-'+String(m.getMonth()+1).padStart(2,'0')+'-'+String(m.getDate()).padStart(2,'0')}
+function prettyWeek(id){const m=new Date(id+'T00:00:00'),s=new Date(m);s.setDate(s.getDate()+6);
+  const f=x=>x.toLocaleDateString(undefined,{day:'numeric',month:'short'});return f(m)+' – '+f(s)}
+const today=()=>{const t=new Date();
+  return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')};
+const prettyDay=id=>new Date(id+'T00:00:00').toLocaleDateString(undefined,{weekday:'short',day:'numeric',month:'short'});
+function ago(t){if(!t)return 'never';const m=Math.floor((Date.now()-t)/60000);
+  if(m<1)return 'just now';if(m<60)return m+'m ago';const h=Math.floor(m/60);
+  if(h<24)return h+'h ago';const d=Math.floor(h/24);return d+(d===1?' day ago':' days ago')}
+const STALE=48*3600*1000;
+const avg=s=>DIMS.reduce((t,d)=>t+s[d.k],0)/DIMS.length;
+
+/* ------------------------------------------------------------ state */
+const S={profile:null,meta:null,week:null,history:[],tab:'home',view:'',step:0,
+  draft:null,note:'',name:'',code:'',mode:null,err:'',copied:false,onboardStep:0,
+  booSelf:null,booShared:{a:null,b:null},booSeen:0,booView:'both',booDraft:null,booNeed:null,booNote:'',booSaved:'',
+  word:null,words:[],wordDraft:'',jar:null,jarDraft:'',jarOpen:false,trouble:'',busy:false,
+  weekIn:{a:false,b:false}};
+let ID=wid();
+const me=()=>S.profile.role, you=()=>S.profile.role==='a'?'b':'a';
+const mine=()=>S.week&&S.week[me()], theirs=()=>S.week&&S.week[you()];
+const nameOf=r=>(S.meta&&S.meta[r==='a'?'aName':'bName'])||'';
+const yourName=()=>nameOf(you())||'your partner';
+
+/* The server decides what we are allowed to know. Anything still sealed simply
+   is not in this response, which is why the views can render it as "waiting". */
+async function pull(full){
+  if(!tokenGet())return;
+  const st=await api('/state?tz='+tzNow());
+  S.profile={name:st.you.name,role:st.role,code:st.pair.code};
+  S.meta={aName:st.pair.aName,bName:st.pair.bName,createdAt:st.pair.createdAt};
+  ID=st.week.id;
+  S.week=st.week.entries;
+  S.weekIn=st.week.submitted;
+  S.booSelf=st.boo.self;
+  S.booShared={a:st.boo.a,b:st.boo.b};
+  S.booSeen=st.boo.seenAt||0;
+  S.word=st.word.entries;
+  S.jar={items:st.jar.items,mine:st.jar.mine,theirs:st.jar.theirs};
+  if(full){
+    const h=await api('/history');
+    S.history=h.weeks;
+    S.words=h.words;
+  }
+}
+const myBoo=()=>S.booSelf||S.booShared[me()];
+const theirBoo=()=>S.booShared[you()];
+const booUnseen=()=>{const t=theirBoo();return !!(t&&t.at>S.booSeen)};
+
+/* ------------------------------------------------------------ pieces */
+function seal(aIn,bIn,score){
+  const size=190,r=size/2-14,c=size/2,circ=2*Math.PI*r,half=circ/2,both=aIn&&bIn;
+  const arc=(col,off,on)=>'<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="'+col+
+    '" stroke-width="10" stroke-linecap="round" stroke-dasharray="'+(half-8)+' '+circ+
+    '" stroke-dashoffset="'+off+'" opacity="'+(on?1:.16)+'"/>';
+  const inner=both
+    ? '<div class="fade"><div style="font:400 54px/1 var(--display)">'+score+
+      '</div><div class="eyebrow" style="margin-top:6px">Together</div></div>'
+    : '<div class="'+(aIn||bIn?'breathe':'')+'" style="max-width:130px"><div style="font:400 22px var(--display);color:var(--haze)">✳</div>'+
+      '<div style="font:400 15px/1.4 var(--body);color:var(--haze);margin-top:6px">'+
+      (aIn||bIn?'Waiting on one of you':'Sealed until you both answer')+'</div></div>';
+  return '<div style="position:relative;width:'+size+'px;height:'+size+'px;margin:0 auto">'+
+    '<svg width="'+size+'" height="'+size+'" style="transform:rotate(-90deg)">'+
+    '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="rgba(246,237,230,.07)" stroke-width="10"/>'+
+    arc('var(--a)',0,aIn)+arc('var(--b)',-half,bIn)+'</svg>'+
+    '<div style="position:absolute;inset:0;display:grid;place-items:center;text-align:center">'+inner+'</div></div>';
+}
+
+function radar(A,B,aN,bN){
+  const W=300,c=W/2,R=105,n=DIMS.length;
+  const pt=(v,i)=>{const a=-Math.PI/2+i*2*Math.PI/n,rr=R*(v/10);
+    return [c+rr*Math.cos(a),c+rr*Math.sin(a)]};
+  const poly=s=>DIMS.map((d,i)=>pt(s[d.k],i).map(x=>x.toFixed(1)).join(',')).join(' ');
+  let g='';
+  [2,4,6,8,10].forEach(v=>{g+='<polygon points="'+DIMS.map((d,i)=>pt(v,i).map(x=>x.toFixed(1)).join(',')).join(' ')+
+    '" fill="none" stroke="rgba(246,237,230,.10)"/>'});
+  DIMS.forEach((d,i)=>{const p=pt(10,i);g+='<line x1="'+c+'" y1="'+c+'" x2="'+p[0].toFixed(1)+'" y2="'+p[1].toFixed(1)+
+    '" stroke="rgba(246,237,230,.08)"/>'});
+  let lbl='';
+  DIMS.forEach((d,i)=>{const a=-Math.PI/2+i*2*Math.PI/n,x=c+(R+20)*Math.cos(a),y=c+(R+20)*Math.sin(a);
+    const anc=Math.abs(Math.cos(a))<.2?'middle':(Math.cos(a)>0?'start':'end');
+    lbl+='<text x="'+x.toFixed(1)+'" y="'+(y+4).toFixed(1)+'" text-anchor="'+anc+
+      '" fill="var(--haze)" style="font:500 10px var(--mono)">'+d.short+'</text>'});
+  return '<svg viewBox="-24 -14 '+(W+48)+' '+(W+28)+'" width="100%">'+g+
+    '<polygon points="'+poly(A)+'" fill="var(--a)" fill-opacity=".2" stroke="var(--a)" stroke-width="2"/>'+
+    '<polygon points="'+poly(B)+'" fill="var(--b)" fill-opacity=".2" stroke="var(--b)" stroke-width="2"/>'+
+    lbl+'</svg>'+
+    '<div class="row" style="justify-content:center;gap:18px;margin-top:6px">'+
+    legend('var(--a)',aN)+legend('var(--b)',bN)+'</div>';
+}
+const legend=(col,l)=>'<span class="row" style="gap:7px;flex:none"><i style="width:9px;height:9px;border-radius:99px;background:'+
+  col+'"></i><span style="font:500 13px var(--body);color:var(--haze)">'+esc(l)+'</span></span>';
+
+function lineChart(pts){
+  const W=320,H=150,pad=6,n=pts.length;
+  const x=i=>n<2?W/2:pad+i*(W-pad*2)/(n-1), y=v=>H-pad-(v/100)*(H-pad*2);
+  const d=pts.map((p,i)=>x(i).toFixed(1)+','+y(p.score).toFixed(1)).join(' ');
+  let dots=pts.map((p,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.score).toFixed(1)+
+    '" r="3.5" fill="var(--glow)"/>').join('');
+  let lbls=pts.map((p,i)=>'<text x="'+x(i).toFixed(1)+'" y="'+(H+12)+'" text-anchor="middle" fill="var(--haze)" style="font:500 9px var(--mono)">'+
+    esc(p.week)+'</text>').join('');
+  return '<svg viewBox="0 -6 '+W+' '+(H+26)+'" width="100%">'+
+    [0,50,100].map(v=>'<line x1="0" x2="'+W+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="rgba(246,237,230,.08)"/>').join('')+
+    (n>1?'<polyline points="'+d+'" fill="none" stroke="var(--glow)" stroke-width="2.5" stroke-linejoin="round"/>':'')+
+    dots+lbls+'</svg>';
+}
+
+const bar=(r,aN,bN)=>'<div style="margin-bottom:14px">'+
+  '<div class="row" style="justify-content:space-between;margin-bottom:8px">'+
+  '<span style="font:500 16px var(--body)">'+esc(r.label)+'</span>'+
+  '<span class="num">'+r.mean.toFixed(1)+'</span></div>'+
+  [[r.a,'var(--a)',aN],[r.b,'var(--b)',bN]].map(x=>
+    '<div class="row" style="gap:10px;margin-bottom:5px">'+
+    '<span style="width:62px;font:400 12px var(--mono);color:var(--haze);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x[2])+'</span>'+
+    '<span class="track"><i style="width:'+(x[0]*10)+'%;background:'+x[1]+'"></i></span>'+
+    '<span class="num" style="width:18px;text-align:right">'+x[0]+'</span></div>').join('')+'</div>';
+
+/* ------------------------------------------------------------ screens */
+function vOnboard(){
+  const head='<div class="eyebrow">Togetherly</div>'+
+    '<h1 style="margin-top:14px">A weekly check-in<br>for the two of you.</h1>'+
+    '<p style="margin-bottom:30px">Eight questions, once a week. Neither of you sees the answers until you have both finished.</p>';
+  if(S.onboardStep===0)return head+
+    '<label class="eyebrow">What should we call you?</label>'+
+    '<input type="text" id="nm" placeholder="First name" value="'+esc(S.name)+'" style="margin-top:12px">'+
+    '<button class="btn" data-act="nm-next"'+(S.name.trim()?'':' disabled')+'>Continue</button>';
+  return head+
+    '<button class="btn '+(S.mode==='new'?'':'quiet')+'" data-act="mode-new">Start a new pair</button>'+
+    '<button class="btn '+(S.mode==='join'?'':'quiet')+'" data-act="mode-join">Join with a code</button>'+
+    (S.mode==='new'?'<button class="btn" data-act="create">Create our pair</button>':'')+
+    (S.mode==='join'?'<input type="text" id="cd" maxlength="6" placeholder="6-letter code" value="'+esc(S.code)+
+      '" style="margin-top:14px;font:600 20px var(--mono);letter-spacing:.2em;text-align:center">'+
+      (S.err?'<p style="color:var(--b);margin-top:10px">'+esc(S.err)+'</p>':'')+
+      '<button class="btn" data-act="join"'+(S.code.trim().length<6?' disabled':'')+'>Join</button>':'')+
+    '<button class="btn ghost" data-act="ob-back">Back</button>';
+}
+
+function vHome(){
+  // TIn is "they have answered", which we are allowed to know; T is what they
+  // actually said, which arrives only once the week opens.
+  const M=mine(),T=theirs(),TIn=S.weekIn[you()],both=M&&T;
+  const score=both?Math.round(((avg(S.week.a.scores)+avg(S.week.b.scores))/2)*10):null;
+  const h=new Date().getHours(),g=h<12?'Morning':h<18?'Afternoon':'Evening';
+  let s='<div class="eyebrow">'+prettyWeek(ID)+'</div><h1>'+g+', '+esc(S.profile.name)+'.</h1>'+
+    '<div class="card center" style="padding:30px 20px 24px">'+seal(S.weekIn.a,S.weekIn.b,score)+
+    '<p style="margin-top:22px">'+
+    (!M?'Your check-in is open. It takes about three minutes.'
+      :both?'Both in. Your week is open.'
+      :'You are done. '+esc(yourName())+' has not finished yet, so nothing is unlocked.')+'</p>'+
+    '<button class="btn" data-act="go-week">'+(!M?"Start this week's check-in":both?'See this week':'Review my answers')+'</button>';
+  if(M&&!TIn)s+='<button class="btn ghost" data-act="nudge" style="color:var(--glow);margin-top:6px">'+
+    (S.week&&S.week.nudgedBy===me()?'Nudge sent':'Nudge '+esc(yourName()))+'</button>';
+  s+='</div>';
+  if(TIn&&!M)s+='<div class="card" style="border-color:rgba(228,143,167,.35)">'+
+    '<div class="eyebrow" style="color:var(--b)">Waiting on you</div>'+
+    '<p style="color:var(--cream);margin-top:10px;font-size:16px">'+esc(nameOf(you())||'Your partner')+
+    ' finished their check-in'+(S.week.nudgedBy&&S.week.nudgedBy!==me()?' and nudged you':'')+
+    '. Their answers stay sealed until yours are in.</p></div>';
+  const th=theirBoo(),mnB=myBoo();
+  if(booUnseen())s+='<div class="card" data-tab="boo" style="cursor:pointer;border-color:'+
+    (you()==='a'?'var(--a)':'var(--b)')+'55"><div class="eyebrow">Between check-ins</div>'+
+    '<p style="margin-top:8px;color:var(--cream);font-size:16px">'+esc(nameOf(you())||'Your partner')+
+    ' updated their Boo '+ago(th.at)+'. Have a look.</p></div>';
+  else if(!mnB||Date.now()-mnB.at>STALE)s+='<div class="card" data-tab="boo" style="cursor:pointer">'+
+    '<div class="eyebrow">Between check-ins</div><p style="margin-top:8px">'+
+    (mnB?'Your Boo has been dozing since your last update. Twenty seconds fixes that.'
+        :'Make a Boo — a small creature that shows how you are today, without a conversation.')+'</p></div>';
+  s+=vWord();
+  s+=vJar();
+  s+='<div class="card"><div class="eyebrow">The ritual</div>'+
+    '<p style="margin-top:10px">Sunday evening works for most couples: quiet, before the week starts, close enough to still remember how it actually felt.</p></div>';
+  return s;
+}
+
+function vWeek(){
+  const M=mine(),T=theirs();
+  if(S.view==='checkin')return vCheckin();
+  if(M&&T)return vResults();
+  if(M){
+    let s='<div class="eyebrow">'+prettyWeek(ID)+'</div><h1>Your answers are in.</h1><div class="card">'+
+      '<p>Nothing unlocks until '+esc(yourName())+' has finished too. You can still change yours until then.</p>'+
+      '<div style="margin-top:18px">';
+    DIMS.forEach(d=>{s+='<div class="row" style="margin-bottom:10px">'+
+      '<span style="flex:1;font:400 15px var(--body)">'+d.label+'</span>'+
+      '<span class="track" style="flex:none;width:84px;height:6px"><i style="width:'+(M.scores[d.k]*10)+
+      '%;background:'+(me()==='a'?'var(--a)':'var(--b)')+'"></i></span>'+
+      '<span class="num" style="width:20px;text-align:right">'+M.scores[d.k]+'</span></div>'});
+    return s+'</div></div><button class="btn quiet" data-act="begin">Change my answers</button>';
+  }
+  return '<div class="eyebrow">'+prettyWeek(ID)+'</div><h1>How was this week,<br>really?</h1>'+
+    '<p style="margin-bottom:26px">Eight questions. Answer for how it felt, not how it should have felt. '+
+    esc(yourName())+' will not see any of it until they have answered too.</p>'+
+    '<button class="btn" data-act="begin">Begin</button>';
+}
+
+function vCheckin(){
+  const col=me()==='a'?'var(--a)':'var(--b)',i=S.step,last=i===DIMS.length;
+  let ticks='';DIMS.forEach((d,n)=>{ticks+='<i style="background:'+(n<=i?col:'rgba(246,237,230,.12)')+'"></i>'});
+  const head='<div class="row" style="margin-bottom:34px"><button data-act="back" aria-label="Back" '+
+    'style="background:none;border:none;color:var(--haze);font-size:22px;cursor:pointer;padding:0 6px 0 0">‹</button>'+
+    '<span class="ticks">'+ticks+'</span></div>';
+  if(!last){
+    const d=DIMS[i],v=S.draft[d.k];
+    return head+'<div class="rise"><div class="eyebrow" style="color:'+col+'">'+
+      String(i+1).padStart(2,'0')+' · '+d.label+'</div><h2>'+d.q+'</h2>'+
+      '<div style="margin-top:56px" class="center">'+
+      '<span id="val" style="font:400 62px/1 var(--display)">'+v+'</span>'+
+      '<span style="font:400 16px var(--mono);color:var(--haze)">/10</span>'+
+      '<input type="range" id="sl" min="1" max="10" step="1" value="'+v+'" aria-label="'+d.label+
+      '" style="--tgc:'+col+';--tgp:'+(((v-1)/9)*100)+'%">'+
+      '<div class="row" style="justify-content:space-between;font:400 13px var(--body);color:var(--haze);margin-top:-4px">'+
+      '<span>Rough</span><span>Really good</span></div></div>'+
+      '<button class="btn" data-act="next" style="background:'+col+';margin-top:30px">Next</button></div>';
+  }
+  return head+'<div class="rise"><div class="eyebrow" style="color:'+col+'">Last one</div>'+
+    '<h2 style="margin-bottom:18px">Anything you want them to know?</h2>'+
+    '<textarea id="nt" rows="5" placeholder="One thing that mattered this week — good or hard. Optional.">'+esc(S.note)+'</textarea>'+
+    '<button class="btn" data-act="submit" style="background:'+col+'">Seal my answers</button>'+
+    '<p class="center" style="margin-top:12px;font-size:13px">You can change them until your partner submits.</p></div>';
+}
+
+function vResults(){
+  const A=S.week.a,B=S.week.b;
+  const aN=nameOf('a')||'Partner A',bN=nameOf('b')||'Partner B';
+  const score=Math.round(((avg(A.scores)+avg(B.scores))/2)*10);
+  const rows=DIMS.map(d=>({label:d.label,k:d.k,a:A.scores[d.k],b:B.scores[d.k],
+    mean:(A.scores[d.k]+B.scores[d.k])/2,gap:Math.abs(A.scores[d.k]-B.scores[d.k])}));
+  const sorted=rows.slice().sort((x,y)=>y.mean-x.mean);
+  const strong=sorted.slice(0,2),low=sorted.slice(-2).reverse();
+  const wide=rows.slice().sort((x,y)=>y.gap-x.gap)[0];
+  let s='<div class="eyebrow">'+prettyWeek(ID)+'</div><h1>Your week, opened.</h1>'+
+    '<div class="card center" style="padding:28px 20px">'+seal(true,true,score)+'<p style="margin-top:18px">'+
+    (score>=80?'A strong week by both your accounts.':score>=65?'A steady week with a couple of soft edges.':
+     score>=50?'A mixed week. Worth talking through the low ones.':'A hard week. Be gentle with each other, and pick one thing below.')+
+    '</p></div>'+
+    '<div class="card"><div class="eyebrow">How you each saw it</div>'+radar(A.scores,B.scores,aN,bN)+'</div>'+
+    '<div class="card"><div class="eyebrow" style="color:var(--sage)">Strongest</div><div style="margin-top:12px">'+
+    strong.map(r=>bar(r,aN,bN)).join('')+'</div></div>'+
+    '<div class="card"><div class="eyebrow" style="color:var(--b)">Needs attention</div><div style="margin-top:12px">'+
+    low.map(r=>bar(r,aN,bN)).join('')+'</div></div>';
+  if(wide.gap>=3)s+='<div class="card"><div class="eyebrow">Where you disagree most</div><h3>'+esc(wide.label)+'</h3>'+
+    '<p>'+wide.gap+' points apart — '+esc(wide.a>wide.b?aN:bN)+
+    ' rated it higher. That gap is usually the most useful thing on this page. Ask what the week looked like from the other side.</p></div>';
+  s+='<div class="card"><div class="eyebrow" style="color:var(--glow)">Next step</div>'+
+    '<p style="margin:10px 0 16px;font-size:14px">Pick one. Not all of them.</p>'+
+    low.map(r=>'<div style="margin-bottom:14px"><div style="font:600 15px var(--body);margin-bottom:8px">'+esc(r.label)+'</div>'+
+      STEPS[r.k].map(t=>'<div class="step"><i></i><div>'+esc(t)+'</div></div>').join('')+'</div>').join('')+'</div>';
+  const notes=[[aN,A.note,'var(--a)'],[bN,B.note,'var(--b)']].filter(x=>x[1]);
+  if(notes.length)s+='<div class="card"><div class="eyebrow">What you each wanted to say</div><div style="margin-top:14px">'+
+    notes.map(x=>'<div class="quote" style="border-color:'+x[2]+'"><b style="color:'+x[2]+'">'+esc(x[0])+'</b><em>'+esc(x[1])+'</em></div>').join('')+
+    '</div></div>';
+  s+=jarReveal();
+  return s;
+}
+
+function vInsights(){
+  if(!S.history.length)return '<div class="eyebrow">Trends</div><h1>Nothing to chart yet.</h1>'+
+    '<p style="font-size:16px;margin-bottom:20px">Finish one week together and the trend starts here. It gets interesting around week four.</p>'+
+    vSeason();
+  const pts=S.history.map(h=>({week:prettyWeek(h.id).split(' – ')[0],
+    score:Math.round(((avg(h.data.a.scores)+avg(h.data.b.scores))/2)*10)}));
+  const L=S.history[S.history.length-1],P=S.history[S.history.length-2];
+  const rows=DIMS.map(d=>{const now=(L.data.a.scores[d.k]+L.data.b.scores[d.k])/2;
+    return {label:d.label,now:now,delta:P?now-(P.data.a.scores[d.k]+P.data.b.scores[d.k])/2:null}})
+    .sort((x,y)=>(y.delta==null?-99:y.delta)-(x.delta==null?-99:x.delta));
+  return '<div class="eyebrow">Trends</div><h1>'+S.history.length+' week'+(S.history.length>1?'s':'')+' on the record.</h1>'+
+    vSeason()+
+    '<div class="card"><div class="eyebrow">Relationship health</div><div style="margin-top:14px">'+lineChart(pts)+'</div></div>'+
+    '<div class="card"><div class="eyebrow">'+(P?'Change since last week':"This week's average")+'</div><div style="margin-top:14px">'+
+    rows.map(r=>'<div class="row" style="margin-bottom:11px"><span style="flex:1;font:400 15px var(--body)">'+esc(r.label)+
+      '</span><span class="num">'+r.now.toFixed(1)+'</span>'+
+      (r.delta==null?'':'<span class="num" style="width:46px;text-align:right;color:'+
+        (r.delta>0?'var(--sage)':r.delta<0?'var(--b)':'var(--haze)')+'">'+(r.delta>0?'+':'')+r.delta.toFixed(1)+'</span>')+
+      '</div>').join('')+'</div></div>';
+}
+
+function vSettings(){
+  return '<div class="eyebrow">Settings</div><h1>Yours and theirs.</h1>'+
+    '<div class="card"><div class="eyebrow">Pairing code</div>'+
+    '<div class="row" style="margin-top:12px"><span style="flex:1;font:600 26px var(--mono);letter-spacing:.22em;color:var(--glow)">'+
+    esc(S.profile.code)+'</span><button data-act="copy" style="background:rgba(246,237,230,.07);border:1px solid var(--line);'+
+    'border-radius:12px;padding:10px 14px;color:var(--cream);font:500 13px var(--body);cursor:pointer">'+
+    (S.copied?'Copied':'Copy')+'</button></div>'+
+    '<p style="margin-top:14px;font-size:14px">Send this to your partner so they can join. Anyone with the code can open your check-ins, so keep it between the two of you.</p></div>'+
+    '<div class="card"><div class="eyebrow">Your name</div>'+
+    '<input type="text" id="sn" value="'+esc(S.profile.name)+'" style="margin-top:12px">'+
+    '<button class="btn quiet" data-act="savename">Save name</button></div>'+
+    '<div class="card"><div class="eyebrow">In this pair</div><div style="margin-top:12px;display:grid;gap:10px">'+
+    legend('var(--a)',nameOf('a')||'Waiting to join')+legend('var(--b)',nameOf('b')||'Waiting to join')+'</div></div>'+
+    '<div class="card"><div class="eyebrow">Reminders</div>'+
+    '<p style="margin-top:10px;font-size:14px">Push notifications need the phone app. For now, a nudge shows up on your partner\'s dashboard.</p></div>'+
+    '<button class="btn ghost" data-act="signout" style="color:var(--b)">Sign out of this device</button>';
+}
+
+/* ------------------------------------------------------------ boo views */
+function creature(type,col,size){
+  const s=size||130;
+  const body='M18 74 V44 a32 32 0 0 1 64 0 v30 l-8 8 -8-8 -8 8 -8-8 -8 8 -8-8 -8 8 -8-8 z';
+  const eye=(x,y,r)=>'<circle cx="'+x+'" cy="'+y+'" r="'+(r||4)+'" fill="#1A1216"/>';
+  const arc=(x,y)=>'<path d="M'+(x-6)+' '+(y+2)+' q6 -8 12 0" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>';
+  const line=(x,y)=>'<path d="M'+(x-6)+' '+y+' h12" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>';
+  let face='',extra='',op=1,squash='';
+  if(type==='radiant'){face=arc(37,52)+arc(63,52)+'<ellipse cx="50" cy="62" rx="6" ry="5" fill="#1A1216"/>';
+    extra='<g opacity=".9"><text x="12" y="30" font-size="13" fill="'+col+'">✦</text>'+
+      '<text x="82" y="24" font-size="10" fill="'+col+'">✦</text>'+
+      '<text x="86" y="52" font-size="8" fill="'+col+'">✦</text></g>'}
+  else if(type==='steady'){face=eye(37,52)+eye(63,52)+
+    '<path d="M42 62 q8 6 16 0" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>'}
+  else if(type==='heavy'){face=eye(37,54,3.5)+eye(63,54,3.5)+
+    '<path d="M31 48 q6 -4 12 -1" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M57 47 q6 -3 12 1" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>'+
+    '<path d="M42 65 q8 -4 16 0" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    extra='<g opacity=".55"><ellipse cx="50" cy="12" rx="17" ry="7" fill="'+col+'"/>'+
+      '<line x1="44" y1="20" x2="42" y2="27" stroke="'+col+'" stroke-width="2" stroke-linecap="round"/>'+
+      '<line x1="56" y1="20" x2="54" y2="27" stroke="'+col+'" stroke-width="2" stroke-linecap="round"/></g>'}
+  else if(type==='depleted'){face=line(37,53)+line(63,53)+
+    '<circle cx="50" cy="63" r="3" fill="#1A1216"/>';squash=' scale(1,.94)';op=.85}
+  else if(type==='drifting'){face=eye(40,52)+eye(66,52)+
+    '<path d="M43 63 h12" stroke="#1A1216" stroke-width="3" stroke-linecap="round"/>';op=.6}
+  else if(type==='stretched'){face='<ellipse cx="37" cy="52" rx="4" ry="5.5" fill="#1A1216"/>'+
+    '<ellipse cx="63" cy="52" rx="4" ry="5.5" fill="#1A1216"/>'+
+    '<path d="M41 63 q4 -4 8 0 q4 4 8 0" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>'}
+  else{face=line(37,53)+line(63,53)+'<path d="M45 64 q5 5 10 0" stroke="#1A1216" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    extra='<g fill="'+col+'" opacity=".8"><text x="76" y="30" font-size="12">z</text>'+
+      '<text x="86" y="20" font-size="9">z</text></g>';op=.5}
+  return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 100 100" class="floaty">'+
+    '<ellipse cx="50" cy="92" rx="26" ry="5" fill="'+col+'" opacity=".14"/>'+
+    '<g transform="translate(50 58)'+squash+' translate(-50 -58)" opacity="'+op+'">'+
+    '<path d="'+body+'" fill="'+col+'"/>'+face+'</g>'+extra+'</svg>';
+}
+
+function booCard(rec,col,name,isMine){
+  if(!rec)return '<div class="card" style="text-align:center;padding:34px 20px;border-style:dashed">'+
+    '<div style="font:400 44px var(--display);color:var(--haze);opacity:.4">?</div>'+
+    '<p style="margin-top:12px">'+esc(name)+' has not shared a Boo yet. Nothing to see until they do.</p></div>';
+  const stale=Date.now()-rec.at>STALE;
+  const t=booType(rec.stats,stale),hp=booHP(rec.stats);
+  const need=NEEDS.filter(n=>n.k===rec.need)[0];
+  return '<div class="card" style="padding:0;overflow:hidden">'+
+    '<div style="padding:16px 18px 0;display:flex;align-items:baseline;justify-content:space-between">'+
+    '<span style="font:400 21px var(--display)">'+esc(name)+"'s Boo</span>"+
+    '<span class="num" style="color:'+col+'">HP '+hp+'</span></div>'+
+    '<div style="margin:12px 12px 0;border-radius:16px;padding:10px 0 4px;text-align:center;position:relative;'+
+    'background:radial-gradient(120% 90% at 50% 25%,'+col+'22,transparent 70%);border:1px solid var(--line)">'+
+    '<span style="position:absolute;top:10px;right:12px;font:500 10px var(--mono);letter-spacing:.1em;'+
+    'text-transform:uppercase;color:'+col+';border:1px solid '+col+'55;border-radius:99px;padding:4px 9px">'+t.label+'</span>'+
+    creature(t.k,col)+
+    '<div style="font:400 15px var(--body);color:var(--haze);padding:0 16px 10px">'+esc(t.blurb)+'</div></div>'+
+    '<div style="padding:16px 18px 6px">'+
+    STATS.map(st=>'<div class="row" style="margin-bottom:8px">'+
+      '<span style="width:96px;font:400 13px var(--body);color:var(--haze)">'+st.label+'</span>'+
+      '<span class="track"><i style="width:'+(rec.stats[st.k]*10)+'%;background:'+col+'"></i></span>'+
+      '<span class="num" style="width:18px;text-align:right">'+rec.stats[st.k]+'</span></div>').join('')+
+    '</div>'+
+    (need?'<div style="margin:6px 12px 0;border:1px solid var(--line);border-radius:14px;padding:14px 16px;'+
+      'background:rgba(246,237,230,.03)"><div class="eyebrow" style="color:'+col+'">Move · '+esc(need.label)+'</div>'+
+      '<p style="margin-top:8px;color:var(--cream);font-size:15px">'+esc(need.move)+'</p></div>':'')+
+    (rec.note?'<div class="quote" style="border-color:'+col+';margin:14px 18px 0"><em>'+esc(rec.note)+'</em></div>':'')+
+    '<div style="padding:14px 18px 16px" class="num">'+(isMine?'You updated ':'Updated ')+ago(rec.at)+
+    (isMine&&!rec.shared?' · private':'')+'</div></div>';
+}
+
+function vBoo(){
+  const mn=myBoo(),th=theirBoo();
+  const myCol=me()==='a'?'var(--a)':'var(--b)',thCol=you()==='a'?'var(--a)':'var(--b)';
+  const myName=S.profile.name||'You',thName=nameOf(you())||'Your partner';
+  if(S.view==='boocheck')return vBooCheck();
+  const seg=[['both','Both'],['mine',myName],['theirs',thName]].map(x=>
+    '<button data-act="booview" data-v="'+x[0]+'" style="flex:1;border:none;cursor:pointer;padding:9px 4px;'+
+    'border-radius:11px;font:500 13px var(--body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;'+
+    (S.booView===x[0]?'background:rgba(246,237,230,.10);color:var(--cream)':'background:none;color:var(--haze)')+
+    '">'+esc(x[1])+'</button>').join('');
+  let s='<div class="eyebrow">Boos</div><h1>How you are,<br>between check-ins.</h1>'+
+    '<div style="display:flex;gap:4px;background:rgba(246,237,230,.04);border:1px solid var(--line);'+
+    'border-radius:14px;padding:4px;margin-bottom:16px">'+seg+'</div>';
+  if(S.booSaved)s+='<div class="card fade" style="border-color:'+myCol+'55"><p style="color:var(--cream)">'+esc(S.booSaved)+'</p></div>';
+  if(booUnseen())s+='<div class="card" style="border-color:'+thCol+'55"><div class="eyebrow" style="color:'+thCol+'">New</div>'+
+    '<p style="margin-top:8px;color:var(--cream);font-size:16px">'+esc(thName)+' updated their Boo '+ago(th.at)+'.</p></div>';
+  if(S.booView!=='theirs')s+=booCard(mn,myCol,myName,true);
+  if(S.booView!=='mine')s+=booCard(th,thCol,thName,false);
+  s+='<button class="btn" data-act="boo-begin">'+(mn?'Update my Boo':'Create my Boo')+'</button>';
+  if(!mn)s+='<p class="center" style="margin-top:12px;font-size:14px">Takes twenty seconds. Nothing is shared unless you choose to share it.</p>';
+  return s;
+}
+
+function vBooCheck(){
+  const col=me()==='a'?'var(--a)':'var(--b)';
+  const thName=nameOf(you())||'your partner';
+  const t=booType(S.booDraft,false);
+  return '<div class="row" style="margin-bottom:22px"><button data-act="boo-cancel" aria-label="Back" '+
+    'style="background:none;border:none;color:var(--haze);font-size:22px;cursor:pointer;padding:0 6px 0 0">‹</button>'+
+    '<span class="eyebrow">Personal check-in</span></div>'+
+    '<div class="center" id="preview">'+creature(t.k,col,120)+
+    '<div class="eyebrow" style="color:'+col+';margin-top:-6px" id="ptype">'+t.label+'</div></div>'+
+    '<h2 style="margin:22px 0 8px">Where are you right now?</h2>'+
+    '<p style="margin-bottom:20px">Not the week. Today.</p>'+
+    STATS.map(st=>'<div style="margin-bottom:10px">'+
+      '<div class="row" style="justify-content:space-between">'+
+      '<span style="font:500 15px var(--body)">'+st.label+'</span>'+
+      '<span class="num" id="v-'+st.k+'">'+S.booDraft[st.k]+'</span></div>'+
+      '<input type="range" data-stat="'+st.k+'" min="1" max="10" step="1" value="'+S.booDraft[st.k]+
+      '" aria-label="'+st.label+'" style="height:40px;--tgc:'+col+';--tgp:'+(((S.booDraft[st.k]-1)/9)*100)+'%">'+
+      '<div class="row" style="justify-content:space-between;font:400 12px var(--body);color:var(--haze);margin-top:-8px">'+
+      '<span>'+st.lo+'</span><span>'+st.hi+'</span></div></div>').join('')+
+    '<div style="margin-top:22px"><div class="eyebrow">What would help most</div>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px">'+
+    NEEDS.map(n=>'<button data-act="need" data-k="'+n.k+'" style="border-radius:99px;cursor:pointer;'+
+      'padding:10px 14px;font:500 14px var(--body);border:1px solid '+(S.booNeed===n.k?col:'var(--line)')+';'+
+      (S.booNeed===n.k?'background:'+col+'22;color:var(--cream)':'background:none;color:var(--haze)')+
+      '">'+n.label+'</button>').join('')+'</div></div>'+
+    '<textarea id="bnt" rows="2" style="margin-top:18px" placeholder="A line of context, if you want. Optional.">'+esc(S.booNote)+'</textarea>'+
+    '<button class="btn" data-act="boo-share" style="background:'+col+'">Save and tell '+esc(thName)+'</button>'+
+    '<button class="btn quiet" data-act="boo-private">Save just for me</button>'+
+    '<p class="center" style="margin-top:12px;font-size:13px">Private Boos still change your own creature. '+esc(thName)+' sees nothing until you share.</p>';
+}
+
+/* --------------------------------------------------- word of the day */
+function vWord(){
+  const M=S.word&&S.word[me()],T=S.word&&S.word[you()];
+  const myCol=me()==='a'?'var(--a)':'var(--b)',thCol=you()==='a'?'var(--a)':'var(--b)';
+  const late=new Date().getHours()>=21;
+  const open=(M&&T)||(late&&(M||T));
+  let s='<div class="card"><div class="eyebrow">One word for today</div>';
+  if(!M){
+    s+='<p style="margin:10px 0 12px">One word for how today went. It unlocks when you have both picked, or at nine.</p>'+
+      '<div class="row" style="gap:10px"><input type="text" id="wd" maxlength="18" placeholder="Your word" value="'+esc(S.wordDraft)+'">'+
+      '<button data-act="word-save" style="border:none;border-radius:14px;padding:14px 18px;background:var(--glow);'+
+      'color:#2A1A14;font:600 15px var(--body);cursor:pointer"'+(S.wordDraft.trim()?'':' disabled')+'>Save</button></div>';
+  } else if(!open){
+    s+='<p style="margin:10px 0 14px">Yours is in. '+esc(nameOf(you())||'Your partner')+
+      (T?' has picked too — unlocking at nine.':' has not picked yet.')+'</p>'+
+      '<div class="row" style="gap:14px"><span style="font:400 26px var(--display);color:'+myCol+'">'+esc(M.word)+'</span>'+
+      '<span style="font:400 26px var(--display);color:var(--haze);opacity:.35">•••••</span></div>'+
+      '<button class="btn ghost" data-act="word-edit" style="margin-top:8px;text-align:left;padding-left:0">Change my word</button>';
+  } else {
+    s+='<div style="display:flex;gap:18px;margin-top:14px;flex-wrap:wrap">'+
+      [[M,myCol,S.profile.name||'You'],[T,thCol,nameOf(you())||'Partner']].map(x=>
+        '<div style="flex:1;min-width:110px"><div class="eyebrow" style="color:'+x[1]+'">'+esc(x[2])+'</div>'+
+        '<div style="font:400 28px/1.2 var(--display);margin-top:8px">'+(x[0]?esc(x[0].word):'—')+'</div></div>').join('')+
+      '</div>';
+  }
+  const past=S.words.filter(w=>w.id!==today()&&w.data.a&&w.data.b).slice(-5).reverse();
+  if(past.length)s+='<div style="margin-top:18px;border-top:1px solid var(--line);padding-top:14px">'+
+    past.map(w=>'<div class="row" style="margin-bottom:7px"><span class="num" style="width:78px">'+esc(prettyDay(w.id))+'</span>'+
+      '<span style="flex:1;font:400 16px var(--display);color:var(--a)">'+esc(w.data.a.word)+'</span>'+
+      '<span style="flex:1;font:400 16px var(--display);color:var(--b);text-align:right">'+esc(w.data.b.word)+'</span></div>').join('')+
+    '</div>';
+  return s+'</div>';
+}
+
+/* ------------------------------------------------------- moments jar */
+function jarItems(){return (S.jar&&S.jar.items)||[]}
+function vJar(){
+  const items=jarItems(),mineC=items.filter(i=>i.by===me());
+  // Counts come from the server: their moments stay sealed, but you can see
+  // that they are in there.
+  const nMine=(S.jar&&S.jar.mine)||0,nTheirs=(S.jar&&S.jar.theirs)||0,nAll=nMine+nTheirs;
+  let s='<div class="card"><div class="eyebrow">Moments jar</div>'+
+    '<p style="margin:10px 0 0">'+(nAll?
+      nAll+' in the jar this week — '+nMine+' from you, '+nTheirs+' from '+esc(nameOf(you())||'them')+
+      '. They open with the week.'
+      :'Drop in anything worth keeping. It stays sealed until the week opens.')+'</p>';
+  if(S.jarOpen){
+    s+='<div class="row" style="gap:10px;margin-top:14px"><input type="text" id="jr" maxlength="140" placeholder="What happened?" value="'+esc(S.jarDraft)+'">'+
+      '<button data-act="jar-add" style="border:none;border-radius:14px;padding:14px 18px;background:var(--glow);'+
+      'color:#2A1A14;font:600 15px var(--body);cursor:pointer"'+(S.jarDraft.trim()?'':' disabled')+'>Add</button></div>';
+  } else {
+    s+='<button class="btn quiet" data-act="jar-open">Drop in a moment</button>';
+  }
+  if(mineC.length)s+='<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px">'+
+    '<div class="eyebrow">Yours so far</div>'+
+    mineC.slice().reverse().map(i=>'<div style="display:flex;gap:10px;margin-top:10px">'+
+      '<span style="color:var(--glow)">·</span><span style="font:400 15px/1.5 var(--body);color:var(--haze)">'+esc(i.text)+'</span></div>').join('')+
+    '</div>';
+  return s+'</div>';
+}
+function jarReveal(){
+  const items=jarItems();if(!items.length)return '';
+  const aN=nameOf('a')||'Partner A',bN=nameOf('b')||'Partner B';
+  return '<div class="card"><div class="eyebrow" style="color:var(--glow)">From the jar</div>'+
+    '<p style="margin:10px 0 14px;font-size:14px">'+items.length+' moment'+(items.length>1?'s':'')+' you each kept hold of.</p>'+
+    items.map(i=>'<div class="quote" style="border-color:'+(i.by==='a'?'var(--a)':'var(--b)')+'">'+
+      '<b style="color:'+(i.by==='a'?'var(--a)':'var(--b)')+'">'+esc(i.by==='a'?aN:bN)+'</b>'+
+      '<em>'+esc(i.text)+'</em></div>').join('')+'</div>';
+}
+
+/* ------------------------------------------------------------ seasons */
+function seasonInfo(){
+  const start=mondayOf((S.meta&&S.meta.createdAt)||Date.now());
+  const elapsed=Math.max(0,Math.round((mondayOf(new Date())-start)/(7*864e5)));
+  const num=Math.floor(elapsed/12)+1,wk=(elapsed%12)+1;
+  const sStart=new Date(start.getTime()+(num-1)*12*7*864e5);
+  let inSeason=S.history.filter(h=>new Date(h.id+'T00:00:00')>=sStart);
+  if(!inSeason.length&&S.history.length)inSeason=S.history.slice(-12);
+  return {num:num,wk:wk,inSeason:inSeason};
+}
+function seasonLetter(H){
+  if(H.length<2)return null;
+  const mean=(h,k)=>(h.data.a.scores[k]+h.data.b.scores[k])/2;
+  const per=DIMS.map(d=>({label:d.label,k:d.k,
+    m:H.reduce((t,h)=>t+mean(h,d.k),0)/H.length,
+    delta:mean(H[H.length-1],d.k)-mean(H[0],d.k)}));
+  const best=per.slice().sort((x,y)=>y.m-x.m)[0];
+  const hard=per.slice().sort((x,y)=>x.m-y.m)[0];
+  const up=per.slice().sort((x,y)=>y.delta-x.delta)[0];
+  const down=per.slice().sort((x,y)=>x.delta-y.delta)[0];
+  const sc=h=>Math.round(((avg(h.data.a.scores)+avg(h.data.b.scores))/2)*10);
+  const s0=sc(H[0]),s1=sc(H[H.length-1]);
+  const arc=s1-s0;
+  const p=[];
+  p.push(H.length+' week'+(H.length>1?'s':'')+' logged. You started this season at '+s0+' and you are at '+s1+' now'+
+    (Math.abs(arc)<4?' — near enough the same place, which is steadier than most.':arc>0?', which is '+arc+' points of climb.':', a drop of '+Math.abs(arc)+' points.'));
+  p.push(best.label.toLowerCase()+' held the whole way through, averaging '+best.m.toFixed(1)+
+    '. When something was working between you this season, that was usually it.');
+  if(up.delta>=0.6)p.push(up.label.toLowerCase()+' moved the most, up '+up.delta.toFixed(1)+
+    ' points from where it started. Whatever you changed there, it registered for both of you.');
+  if(down.delta<=-0.6&&down.k!==up.k)p.push(down.label.toLowerCase()+' went the other way, down '+
+    Math.abs(down.delta).toFixed(1)+'. Worth naming before the next season starts.');
+  p.push(hard.k===up.k
+    ? hard.label.toLowerCase()+' is still the lowest at '+hard.m.toFixed(1)+
+      ', but it is climbing off a low base, which is the direction you want.'
+    : hard.label.toLowerCase()+' stayed the hardest at '+hard.m.toFixed(1)+
+      '. Not a verdict — just the thing that keeps asking for attention.');
+  return p;
+}
+function vSeason(){
+  const I=seasonInfo(),letter=seasonLetter(I.inSeason);
+  const done=I.wk>=12;
+  let ticks='';for(let n=1;n<=12;n++)ticks+='<i style="background:'+
+    (n<=I.wk?'var(--glow)':'rgba(246,237,230,.12)')+'"></i>';
+  let s='<div class="card"><div class="row" style="justify-content:space-between;align-items:baseline">'+
+    '<span class="eyebrow">Season '+I.num+'</span>'+
+    '<span class="num">week '+Math.min(I.wk,12)+' of 12</span></div>'+
+    '<div class="ticks" style="margin-top:14px">'+ticks+'</div>'+
+    '<p style="margin-top:14px;font-size:14px">'+I.inSeason.length+' of those weeks are on the record.'+
+    (done?' The season closes here.':' Twelve weeks makes a season, then you get the letter.')+'</p></div>';
+  if(letter)s+='<div class="card"><div class="eyebrow" style="color:var(--glow)">'+
+    (done?'Season '+I.num+' letter':'The letter so far')+'</div>'+
+    letter.map(t=>'<p style="margin-top:12px;font:400 16px/1.65 var(--display);color:var(--cream)">'+esc(t)+'</p>').join('')+
+    '</div>';
+  return s;
+}
+
+/* ------------------------------------------------------------ render */
+function render(){
+  const app=document.getElementById('app'),tabs=document.getElementById('tabs');
+  try{
+    const warn=S.trouble?'<div class="card" style="border-color:rgba(228,143,167,.45)">'+
+      '<div class="eyebrow" style="color:var(--b)">Not saved</div>'+
+      '<p style="margin-top:8px;color:var(--cream)">'+esc(S.trouble)+'</p></div>':'';
+    if(!S.profile){app.innerHTML='<div class="rise" style="padding-top:30px">'+warn+vOnboard()+'</div>';tabs.hidden=true;}
+    else{
+      const body=S.tab==='home'?vHome():S.tab==='week'?vWeek():S.tab==='boo'?vBoo():
+        S.tab==='insights'?vInsights():vSettings();
+      app.innerHTML='<div class="rise">'+warn+body+'</div>';
+      tabs.hidden=false;
+      const items=[['home','Home','⌂'],['week','Week','❤'],['boo','Boos','◕'],
+        ['insights','Trends','◹'],['settings','You','⚙']];
+      const dotFor=k=>(k==='week'&&mine()&&!S.weekIn[you()])||(k==='boo'&&booUnseen())?'<i class="dot"></i>':'';
+      tabs.innerHTML='<div>'+items.map(t=>'<button data-tab="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+
+        '<span style="font-size:19px;line-height:1">'+t[2]+'</span><span>'+t[1]+'</span>'+
+        dotFor(t[0])+'</button>').join('')+'</div>';
+    }
+    wire();
+  }catch(e){
+    app.innerHTML='<div class="card"><div class="eyebrow" style="color:var(--b)">Something broke</div>'+
+      '<p style="margin-top:10px">'+esc(e.message)+'</p></div>';
+  }
+}
+
+function wire(){
+  const sl=document.getElementById('sl');
+  if(sl)sl.addEventListener('input',e=>{
+    const v=+e.target.value,d=DIMS[S.step];S.draft[d.k]=v;
+    document.getElementById('val').textContent=v;
+    e.target.style.setProperty('--tgp',(((v-1)/9)*100)+'%');
+  });
+  const nm=document.getElementById('nm');
+  if(nm)nm.addEventListener('input',e=>{S.name=e.target.value;
+    document.querySelector('[data-act="nm-next"]').disabled=!S.name.trim()});
+  const cd=document.getElementById('cd');
+  if(cd)cd.addEventListener('input',e=>{S.code=e.target.value.toUpperCase();e.target.value=S.code;S.err='';
+    document.querySelector('[data-act="join"]').disabled=S.code.trim().length<6});
+  const nt=document.getElementById('nt');
+  if(nt)nt.addEventListener('input',e=>{S.note=e.target.value});
+  const bnt=document.getElementById('bnt');
+  if(bnt)bnt.addEventListener('input',e=>{S.booNote=e.target.value});
+  const wd=document.getElementById('wd');
+  if(wd)wd.addEventListener('input',e=>{S.wordDraft=e.target.value;
+    const b=document.querySelector('[data-act="word-save"]');if(b)b.disabled=!S.wordDraft.trim()});
+  const jr=document.getElementById('jr');
+  if(jr){jr.focus();jr.addEventListener('input',e=>{S.jarDraft=e.target.value;
+    const b=document.querySelector('[data-act="jar-add"]');if(b)b.disabled=!S.jarDraft.trim()})}
+  document.querySelectorAll('input[data-stat]').forEach(el=>{
+    el.addEventListener('input',e=>{
+      const k=e.target.getAttribute('data-stat'),v=+e.target.value;
+      S.booDraft[k]=v;
+      e.target.style.setProperty('--tgp',(((v-1)/9)*100)+'%');
+      const lab=document.getElementById('v-'+k);if(lab)lab.textContent=v;
+      const t=booType(S.booDraft,false),col=me()==='a'?'var(--a)':'var(--b)';
+      const pv=document.getElementById('preview');
+      if(pv&&pv.getAttribute('data-t')!==t.k){
+        pv.setAttribute('data-t',t.k);
+        pv.innerHTML=creature(t.k,col,120)+'<div class="eyebrow" style="color:'+col+';margin-top:-6px">'+t.label+'</div>';
+      }
+    });
+  });
+}
+
+document.addEventListener('click',async e=>{
+  const t=e.target.closest('[data-act],[data-tab]');if(!t)return;
+  if(S.busy)return;
+  S.busy=true;
+  try{await act(t);S.trouble=''}
+  catch(err){
+    if(err.status===401){tokenSet(null);S.profile=null;S.onboardStep=0;S.mode=null;
+      S.trouble='You were signed out. Please sign in again.'}
+    else S.trouble=err.message||'Something went wrong.';
+  }
+  finally{S.busy=false}
+  render();
+});
+
+async function act(t){
+  const tab=t.getAttribute('data-tab');
+  if(tab){S.tab=tab;S.view='';S.booSaved='';
+    // Show the tab straight away from what we already have, then refresh behind
+    // it — between the 20s poll and a partner who just posted something, a
+    // stale tab is the common case, not the rare one.
+    render();
+    await pull(tab==='insights');
+    if(tab==='boo'&&theirBoo()){S.booSeen=theirBoo().at;await api('/boo/seen','POST')}
+    return}
+  const a=t.getAttribute('data-act');
+  if(a==='nm-next'){S.onboardStep=1}
+  else if(a==='ob-back'){S.onboardStep=0;S.mode=null}
+  else if(a==='mode-new'){S.mode='new'}
+  else if(a==='mode-join'){S.mode='join'}
+  else if(a==='create'){
+    const r=await api('/pair','POST',{name:S.name.trim(),tz:tzNow()});
+    tokenSet(r.token);await pull(true);S.tab='home';
+  }
+  else if(a==='join'){
+    S.err='';
+    try{
+      const r=await api('/pair/join','POST',
+        {code:S.code.trim().toUpperCase(),name:S.name.trim(),tz:tzNow()});
+      tokenSet(r.token);await pull(true);S.tab='home';
+    }catch(err){
+      // A wrong code is an ordinary thing to do, not an error worth a banner.
+      if(err.status===404||err.status===409||err.status===429){S.err=err.message;return}
+      throw err;
+    }
+  }
+  else if(a==='go-week'){S.tab='week'}
+  else if(a==='begin'){const M=mine();S.draft={};DIMS.forEach(d=>S.draft[d.k]=M?M.scores[d.k]:7);
+    S.note=M?(M.note||''):'';S.step=0;S.view='checkin'}
+  else if(a==='next'){S.step++}
+  else if(a==='back'){if(S.step===0){S.view=''}else{S.step--}}
+  else if(a==='submit'){
+    await api('/checkin','POST',{scores:S.draft,note:S.note.trim()});
+    S.view='';await pull(true);
+  }
+  else if(a==='nudge'){await api('/nudge','POST');await pull()}
+  else if(a==='word-save'){
+    const v=S.wordDraft.trim().split(/\s+/)[0];if(!v)return;
+    await api('/word','POST',{word:v});S.wordDraft='';await pull();
+  }
+  else if(a==='word-edit'){
+    const r=await api('/word','DELETE');S.wordDraft=r.word||'';await pull();
+  }
+  else if(a==='jar-open'){S.jarOpen=true}
+  else if(a==='jar-add'){
+    const v=S.jarDraft.trim();if(!v)return;
+    await api('/jar','POST',{text:v});S.jarDraft='';S.jarOpen=false;await pull();
+  }
+  else if(a==='booview'){S.booView=t.getAttribute('data-v')}
+  else if(a==='boo-begin'){
+    const cur=myBoo();S.booDraft={};
+    STATS.forEach(st=>S.booDraft[st.k]=cur?cur.stats[st.k]:6);
+    S.booNeed=cur?cur.need:null;S.booNote=cur?(cur.note||''):'';S.booSaved='';S.view='boocheck';
+  }
+  else if(a==='boo-cancel'){S.view=''}
+  else if(a==='need'){const k=t.getAttribute('data-k');S.booNeed=S.booNeed===k?null:k}
+  else if(a==='boo-private'||a==='boo-share'){
+    const shared=a==='boo-share';
+    await api('/boo','POST',
+      {stats:S.booDraft,need:S.booNeed,note:S.booNote.trim(),shared:shared});
+    await pull();
+    S.view='';S.booView='both';
+    S.booSaved=shared?((nameOf(you())||'Your partner')+' will see this next time they open Togetherly.')
+      :'Saved privately. Only your Boo changed.';
+  }
+  else if(a==='copy'){try{await navigator.clipboard.writeText(S.profile.code);S.copied=true;
+    setTimeout(()=>{S.copied=false;render()},1600)}catch(err){}}
+  else if(a==='savename'){
+    const v=(document.getElementById('sn').value||'').trim();if(!v)return;
+    await api('/name','POST',{name:v});await pull();
+  }
+  else if(a==='signout'){
+    try{await api('/signout','POST')}catch(err){}
+    tokenSet(null);S.profile=null;S.onboardStep=0;S.mode=null;S.name='';S.code='';
+    S.week=null;S.meta=null;S.history=[];S.words=[];S.jar=null;S.word=null;
+    S.booSelf=null;S.booShared={a:null,b:null};
+  }
+}
+
+/* ------------------------------------------------------------ boot */
+const snapshot=()=>JSON.stringify([S.week,S.meta,S.booShared,S.word,S.jar]);
+
+(async function(){
+  try{
+    if(tokenGet())await pull(true);
+  }catch(e){
+    if(e.status===401)tokenSet(null);
+    else S.trouble=e.message||'Could not reach Togetherly.';
+  }
+  render();
+  setInterval(async()=>{
+    if(!S.profile||S.view==='checkin'||S.busy)return;
+    const before=snapshot();
+    try{await pull()}catch(e){return}
+    if(snapshot()!==before)render();
+  },20000);
+  window.addEventListener('focus',async()=>{
+    if(!S.profile||S.view==='checkin'||S.busy)return;
+    try{await pull();render()}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

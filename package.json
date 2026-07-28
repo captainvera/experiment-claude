@@ -1,0 +1,18 @@
+{
+  "name": "togetherly",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A weekly check-in for the two of you. Cloudflare Workers + D1.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create togetherly",
+    "db:migrate:local": "wrangler d1 migrations apply togetherly --local",
+    "db:migrate": "wrangler d1 migrations apply togetherly --remote",
+    "db:console": "wrangler d1 execute togetherly --remote --command",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^4.28.0"
+  }
+}
