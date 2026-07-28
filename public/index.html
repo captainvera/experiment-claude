@@ -695,27 +695,61 @@ function vSeason(){
 }
 
 /* ------------------------------------------------------------ render */
+/* render() is called for every click, every poll and every refresh, so it has
+   to be cheap and quiet. Two rules keep it from flickering:
+
+     - Rebuild the DOM only when the markup actually differs. A poll that finds
+       nothing new, or a refresh that confirms what we already drew, touches
+       nothing — which also means it cannot steal focus from a field you are
+       typing in.
+     - Replay the entrance animation only when you have genuinely moved to
+       another screen, not every time a value on the current one changes.
+
+   Without these, tapping a tab replays a 0.5s fade-and-slide over the whole
+   page, twice: once for the optimistic render and again when the refresh
+   lands. */
+let lastInner='',lastScreen='',lastTabs='';
+
 function render(){
   const app=document.getElementById('app'),tabs=document.getElementById('tabs');
   try{
     const warn=S.trouble?'<div class="card" style="border-color:rgba(228,143,167,.45)">'+
       '<div class="eyebrow" style="color:var(--b)">Not saved</div>'+
       '<p style="margin-top:8px;color:var(--cream)">'+esc(S.trouble)+'</p></div>':'';
-    if(!S.profile){app.innerHTML='<div class="rise" style="padding-top:30px">'+warn+vOnboard()+'</div>';tabs.hidden=true;}
-    else{
-      const body=S.tab==='home'?vHome():S.tab==='week'?vWeek():S.tab==='boo'?vBoo():
-        S.tab==='insights'?vInsights():vSettings();
-      app.innerHTML='<div class="rise">'+warn+body+'</div>';
-      tabs.hidden=false;
-      const items=[['home','Home','⌂'],['week','Week','❤'],['boo','Boos','◕'],
-        ['insights','Trends','◹'],['settings','You','⚙']];
-      const dotFor=k=>(k==='week'&&mine()&&!S.weekIn[you()])||(k==='boo'&&booUnseen())?'<i class="dot"></i>':'';
-      tabs.innerHTML='<div>'+items.map(t=>'<button data-tab="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+
-        '<span style="font-size:19px;line-height:1">'+t[2]+'</span><span>'+t[1]+'</span>'+
-        dotFor(t[0])+'</button>').join('')+'</div>';
+    let inner,screen;
+    if(!S.profile){
+      inner='<div style="padding-top:30px">'+warn+vOnboard()+'</div>';
+      screen='onboard/'+S.onboardStep+'/'+S.mode;
+    }else{
+      inner=warn+(S.tab==='home'?vHome():S.tab==='week'?vWeek():S.tab==='boo'?vBoo():
+        S.tab==='insights'?vInsights():vSettings());
+      screen=S.tab+'/'+S.view+'/'+S.step;
     }
-    wire();
+
+    const moved=screen!==lastScreen;
+    if(moved||inner!==lastInner){
+      app.innerHTML=inner;
+      lastInner=inner;
+      if(moved){
+        // Restart the animation from the top. Reading offsetWidth forces the
+        // style flush that makes removing and re-adding the class take effect.
+        app.classList.remove('rise');void app.offsetWidth;app.classList.add('rise');
+        lastScreen=screen;
+      }
+      wire();
+    }
+
+    if(!S.profile){tabs.hidden=true;lastTabs='';return}
+    tabs.hidden=false;
+    const items=[['home','Home','⌂'],['week','Week','❤'],['boo','Boos','◕'],
+      ['insights','Trends','◹'],['settings','You','⚙']];
+    const dotFor=k=>(k==='week'&&mine()&&!S.weekIn[you()])||(k==='boo'&&booUnseen())?'<i class="dot"></i>':'';
+    const bar='<div>'+items.map(t=>'<button data-tab="'+t[0]+'" class="'+(S.tab===t[0]?'on':'')+'">'+
+      '<span style="font-size:19px;line-height:1">'+t[2]+'</span><span>'+t[1]+'</span>'+
+      dotFor(t[0])+'</button>').join('')+'</div>';
+    if(bar!==lastTabs){tabs.innerHTML=bar;lastTabs=bar}
   }catch(e){
+    lastInner='';lastScreen='';
     app.innerHTML='<div class="card"><div class="eyebrow" style="color:var(--b)">Something broke</div>'+
       '<p style="margin-top:10px">'+esc(e.message)+'</p></div>';
   }

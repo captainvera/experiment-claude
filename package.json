@@ -3,7 +3,12 @@
   "version": "1.0.0",
   "private": true,
   "description": "A weekly check-in for the two of you. Cloudflare Workers + D1.",
+  "type": "module",
   "scripts": {
+    "test": "node test/access.mjs && node test/api.mjs",
+    "test:api": "node test/api.mjs",
+    "test:access": "node test/access.mjs",
+    "test:ui": "node test/ui.mjs",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "db:create": "wrangler d1 create togetherly",

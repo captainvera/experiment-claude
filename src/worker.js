@@ -25,6 +25,147 @@ const WORD_OPENS_AT_HOUR = 21;
 const JOIN_FAIL_LIMIT = 10;
 const JOIN_LOCKOUT_MS = 15 * 60 * 1000;
 
+/* --------------------------------------------------- cloudflare access */
+
+/**
+ * Optional gate in front of everything, including the static page.
+ *
+ * Access already blocks unauthenticated requests at the edge for the hostname
+ * you attach the policy to — but the Worker keeps answering on its
+ * *.workers.dev address, which no Access policy covers. So the Worker verifies
+ * the assertion itself. That closes the bypass wherever the request arrives.
+ *
+ * Inert until ACCESS_TEAM_DOMAIN and ACCESS_AUD are both set, so an
+ * unconfigured deployment behaves exactly as before.
+ */
+
+const JWKS_TTL = 60 * 60 * 1000;
+let jwksCache = { at: 0, team: null, keys: null };
+
+/** Accepts "myteam", "myteam.cloudflareaccess.com" or a full URL. */
+function normalizeTeam(raw) {
+  const value = String(raw || '').trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  if (!value) return null;
+  return value.includes('.') ? value : `${value}.cloudflareaccess.com`;
+}
+
+function b64urlBytes(text) {
+  const padded = text.replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(padded + '='.repeat((4 - (padded.length % 4)) % 4));
+  const out = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+  return out;
+}
+
+const decodeSegment = segment => JSON.parse(new TextDecoder().decode(b64urlBytes(segment)));
+
+async function accessKeys(team) {
+  const fresh = jwksCache.keys && jwksCache.team === team && Date.now() - jwksCache.at < JWKS_TTL;
+  if (fresh) return jwksCache.keys;
+
+  const res = await fetch(`https://${team}/cdn-cgi/access/certs`);
+  if (!res.ok) throw new Error(`Access certs returned ${res.status}`);
+  const { keys } = await res.json();
+  if (!Array.isArray(keys) || !keys.length) throw new Error('Access certs contained no keys');
+
+  jwksCache = { at: Date.now(), team, keys };
+  return keys;
+}
+
+async function verifyAccessJwt(token, team, aud) {
+  const parts = String(token).split('.');
+  if (parts.length !== 3) return null;
+  const [rawHeader, rawPayload, rawSignature] = parts;
+
+  let header, payload;
+  try {
+    header = decodeSegment(rawHeader);
+    payload = decodeSegment(rawPayload);
+  } catch (err) {
+    return null;
+  }
+  if (header.alg !== 'RS256') return null;
+
+  const jwk = (await accessKeys(team)).find(k => k.kid === header.kid);
+  if (!jwk) return null;
+
+  const key = await crypto.subtle.importKey(
+    'jwk',
+    { kty: jwk.kty, n: jwk.n, e: jwk.e, alg: 'RS256', ext: true },
+    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+    false,
+    ['verify'],
+  );
+  const signed = new TextEncoder().encode(`${rawHeader}.${rawPayload}`);
+  const ok = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, b64urlBytes(rawSignature), signed);
+  if (!ok) return null;
+
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp === 'number' && payload.exp <= now) return null;
+  if (typeof payload.nbf === 'number' && payload.nbf > now + 60) return null;
+  if (payload.iss !== `https://${team}`) return null;
+
+  const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+  if (!audiences.includes(aud)) return null;
+
+  return payload;
+}
+
+function readCookie(request, name) {
+  const header = request.headers.get('cookie');
+  if (!header) return null;
+  for (const part of header.split(';')) {
+    const eq = part.indexOf('=');
+    if (eq === -1) continue;
+    if (part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
+  }
+  return null;
+}
+
+function accessDenied(isApi, message, status) {
+  if (isApi) return json({ error: message }, status);
+  return new Response(
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<title>Togetherly</title>` +
+    `<body style="margin:0;display:grid;place-items:center;min-height:100vh;background:#1A1216;color:#F6EDE6;` +
+    `font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px">` +
+    `<div style="max-width:22rem"><h1 style="font:400 28px Georgia,serif;margin:0 0 12px">Togetherly</h1>` +
+    `<p style="color:#A6919B;line-height:1.6;margin:0">${message}</p></div></body>`,
+    { status, headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } },
+  );
+}
+
+/**
+ * Returns a Response to block the request, or null to let it through.
+ */
+async function accessGate(request, env, isApi) {
+  const team = normalizeTeam(env.ACCESS_TEAM_DOMAIN);
+  const aud = String(env.ACCESS_AUD || '').trim();
+  if (!team || !aud) return null;
+
+  const token = request.headers.get('cf-access-jwt-assertion') || readCookie(request, 'CF_Authorization');
+  if (!token) {
+    return accessDenied(isApi, 'This app is protected by Cloudflare Access. Open it through your Access-protected address and sign in.', 401);
+  }
+
+  let claims;
+  try {
+    claims = await verifyAccessJwt(token, team, aud);
+  } catch (err) {
+    // A JWKS fetch failure is our problem, not the visitor's — say so rather
+    // than implying they are unauthorised.
+    console.error('access verification failed', err && err.stack);
+    return accessDenied(isApi, 'Could not check your sign-in just now. Please try again in a moment.', 503);
+  }
+  if (!claims) {
+    return accessDenied(isApi, 'Your Access session is not valid for this app. Sign in again.', 403);
+  }
+  return null;
+}
+
+// Exported for tests; the Worker itself only ever uses accessGate().
+export { verifyAccessJwt, normalizeTeam };
+
 /* -------------------------------------------------------------- plumbing */
 
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
@@ -539,7 +680,12 @@ async function route(request, env, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
-    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
+    const isApi = url.pathname.startsWith('/api/');
+
+    const blocked = await accessGate(request, env, isApi);
+    if (blocked) return blocked;
+
+    if (!isApi) return env.ASSETS.fetch(request);
 
     try {
       return await route(request, env, ctx);

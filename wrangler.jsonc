@@ -5,16 +5,26 @@
   "main": "src/worker.js",
   "compatibility_date": "2025-07-01",
 
-  // Static frontend (public/index.html) is served straight from Cloudflare's edge.
-  // Only /api/* is routed through the Worker, so page loads cost no Worker invocation.
+  // Every request goes through the Worker, which then serves the static page
+  // from env.ASSETS. Routing only /api/* through it would be marginally
+  // cheaper, but then the Cloudflare Access check below could never run for
+  // the page itself — an auth gate you can walk around is not a gate.
   "assets": {
     "directory": "./public",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": true
   },
 
   "observability": { "enabled": true },
+
+  // Cloudflare Access. Leave both empty and the app is open to anyone with the
+  // link (its own pairing-code auth still applies). Set both to require an
+  // Access sign-in before anything is served — see README.
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": ""
+  },
 
   "d1_databases": [
     {

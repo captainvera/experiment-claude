@@ -124,6 +124,28 @@ creation and every week/day boundary and unlock is computed server-side from
 **Sessions can be ended.** `POST /api/signout` deletes that device's row.
 Other devices on the same account keep working.
 
+### Cloudflare Access (optional)
+
+The app's own auth protects the *data*: without a pairing code or a session
+token there is nothing to see. It does not protect the *page*, which loads for
+anyone with the link. Setting `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` puts
+Cloudflare Access in front of everything, page included.
+
+The Worker verifies the `Cf-Access-Jwt-Assertion` (or `CF_Authorization`
+cookie) itself — fetching the team's JWKS, checking the RS256 signature, `exp`,
+`nbf`, `iss` and `aud`, and caching the keys for an hour. This is not
+redundant. Access only guards the hostname its policy is attached to, and the
+Worker keeps answering on its `*.workers.dev` address, which no Access policy
+covers. Checking in the Worker means the gate holds wherever the request
+arrives.
+
+Consequently `run_worker_first` is `true` rather than scoped to `/api/*`.
+Serving the page directly from the asset layer would be marginally cheaper, but
+the Worker would never see those requests and so could never gate them.
+
+With both variables empty the check is skipped entirely, so an unconfigured
+deployment behaves exactly as it did before.
+
 ### Endpoints
 
 | Method | Path | Notes |

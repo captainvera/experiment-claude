@@ -61,6 +61,46 @@ Open the URL, tap **Start a new pair**, and send the six-character code to your
 partner. The code works exactly once — after they join it stops working, which
 is the point.
 
+## Putting Cloudflare Access in front
+
+By default the app is reachable by anyone with the link. Its own auth still
+applies — you cannot see anything without a pairing code or a session token —
+but the page itself will load for a stranger. Cloudflare Access adds a sign-in
+(email one-time code, Google, whatever you enable) before anything is served.
+
+**You need a custom domain on the same Cloudflare account.** Access policies
+attach to hostnames in a zone you control, and `*.workers.dev` is not one, so
+this cannot be done on the free workers.dev URL alone. Set up the custom domain
+first (below), then:
+
+1. **Zero Trust → Access → Applications → Add an application → Self-hosted.**
+   Point it at your domain.
+2. Add a policy — **Allow**, with an **Emails** rule listing the two of you.
+3. On the application's **Overview** tab, copy the **Application Audience (AUD)
+   Tag**.
+4. Note your team domain — **Zero Trust → Settings → Custom Pages** shows it,
+   in the form `yourteam.cloudflareaccess.com`.
+5. Put both into `wrangler.jsonc` and redeploy:
+
+```jsonc
+"vars": {
+  "ACCESS_TEAM_DOMAIN": "yourteam.cloudflareaccess.com",
+  "ACCESS_AUD": "the-long-hex-aud-tag"
+}
+```
+
+Neither value is a secret, so committing them is fine.
+
+The Worker verifies the Access assertion itself on every request rather than
+trusting that it was already checked. That matters: Access only guards the
+hostname you attached the policy to, while your Worker keeps answering on its
+`*.workers.dev` address, which no policy covers. Verifying in the Worker closes
+that door wherever the request arrives. For belt and braces you can also turn
+the workers.dev address off entirely by adding `"workers_dev": false`.
+
+Leave either variable empty and the gate is skipped, so nothing changes until
+you have finished setting it up.
+
 ### A custom domain (optional)
 
 Add the route to `wrangler.jsonc` and redeploy:
@@ -86,6 +126,24 @@ npm run tail               # live logs from production
 offline and against throwaway data. Open the app in a normal window and an
 incognito one to play both partners at once.
 
+### Tests
+
+```bash
+npm test          # Access token verification, then the API (needs `npm run dev`)
+npm run test:ui   # drives two real browsers through the whole app
+```
+
+`test/access.mjs` generates an RSA key, signs real JWTs and checks they are
+accepted — and that expired, wrong-audience, wrong-issuer, unsigned (`alg:none`)
+and HMAC-substituted ones are not. No network needed.
+
+`test/api.mjs` runs against a live Worker and asserts, among other things, that
+a sealed check-in is absent from the JSON payload rather than merely unrendered.
+
+`test/ui.mjs` needs Playwright (`npm i -D playwright && npx playwright install
+chromium`), which is deliberately not a dependency so it stays out of deploys.
+Set `CHROMIUM_PATH` if your browser lives somewhere unusual.
+
 ## Layout
 
 ```
@@ -95,6 +153,7 @@ migrations/            D1 schema, applied in order by wrangler
 wrangler.jsonc         bindings and routing
 scripts/provision.mjs  creates the database and points wrangler.jsonc at it
 setup.sh               first-run setup from a terminal
+test/                  API, Access and browser suites
 docs/architecture.md   how it works, and why it works this way
 ```
 
