@@ -12,10 +12,38 @@ about what actually changed.
 Runs entirely on Cloudflare: a Worker for the API, D1 for storage, and Workers
 Static Assets for the page itself.
 
-## Setting it up
+## Publishing it
 
-You need a Cloudflare account. Nothing else — no database to provision, no
-keys to copy between dashboards.
+You need a Cloudflare account. There is no database to create by hand and no
+config file to edit — the deploy resolves all of that itself.
+
+### From a browser, including a phone
+
+No terminal required. Two secrets, one button.
+
+**1. Get a Cloudflare API token.** In the Cloudflare dashboard: **My Profile →
+API Tokens → Create Token**, use the **Edit Cloudflare Workers** template, and
+copy the token. It is shown once.
+
+**2. Get your Account ID.** Cloudflare dashboard → **Workers & Pages**; the
+account id is in the right-hand sidebar (on mobile, scroll past the main panel).
+
+**3. Put both into GitHub.** In this repo: **Settings → Secrets and variables →
+Actions → New repository secret**. Add them with exactly these names:
+
+| Secret | Value |
+| --- | --- |
+| `CLOUDFLARE_API_TOKEN` | the token from step 1 |
+| `CLOUDFLARE_ACCOUNT_ID` | the id from step 2 |
+
+**4. Run it.** Go to the **Actions** tab → **Deploy** → **Run workflow**.
+
+It creates the D1 database if it does not exist, points `wrangler.jsonc` at it,
+applies the migrations and deploys. Your `*.workers.dev` URL is printed at the
+end of the **Deploy** step's log. Every later push to `main` redeploys
+automatically.
+
+### From a terminal
 
 ```bash
 git clone <this repo>
@@ -23,30 +51,15 @@ cd togetherly
 ./setup.sh
 ```
 
-`setup.sh` installs dependencies, opens a browser for the Cloudflare login,
-creates the D1 database, writes its id into `wrangler.jsonc`, applies the
-migrations and deploys. It prints your `*.workers.dev` URL at the end. Re-run
-it any time; every step checks whether it has already been done.
+Same steps, run locally: installs dependencies, opens a browser for the
+Cloudflare login, creates the database, migrates, deploys. Re-run it any time —
+every step checks whether it has already been done.
 
-Then commit the database id it wrote:
-
-```bash
-git commit -am "Add D1 database id"
-```
+### Then
 
 Open the URL, tap **Start a new pair**, and send the six-character code to your
 partner. The code works exactly once — after they join it stops working, which
 is the point.
-
-### Deploying on every push (optional)
-
-`.github/workflows/deploy.yml` deploys `main` to Cloudflare. It needs two
-repository secrets under **Settings → Secrets and variables → Actions**:
-
-| Secret | Where to get it |
-| --- | --- |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare dashboard → My Profile → API Tokens → Create Token → **Edit Cloudflare Workers** template |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare dashboard → Workers & Pages → right-hand sidebar |
 
 ### A custom domain (optional)
 
@@ -80,7 +93,8 @@ public/index.html      the entire frontend — no build step, no dependencies
 src/worker.js          the API, and the only thing that touches data
 migrations/            D1 schema, applied in order by wrangler
 wrangler.jsonc         bindings and routing
-setup.sh               first-run setup
+scripts/provision.mjs  creates the database and points wrangler.jsonc at it
+setup.sh               first-run setup from a terminal
 docs/architecture.md   how it works, and why it works this way
 ```
 

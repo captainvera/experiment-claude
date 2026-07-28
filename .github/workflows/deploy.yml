@@ -1,13 +1,22 @@
 name: Deploy
 
+# Publishes Togetherly to Cloudflare. Everything is resolved at deploy time —
+# the database is created if missing and its id written into wrangler.jsonc —
+# so publishing needs no local terminal and no files edited by hand.
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - 'claude/**'
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -18,16 +27,24 @@ jobs:
 
       - run: npm ci
 
-      # Migrations are additive and idempotent — wrangler tracks which have
-      # already been applied — so this is safe on every push.
+      - name: Check credentials are present
+        run: |
+          missing=""
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing="$missing CLOUDFLARE_API_TOKEN"
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing="$missing CLOUDFLARE_ACCOUNT_ID"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secret(s):$missing"
+            echo "Add them under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Create the database if it does not exist
+        run: node scripts/provision.mjs
+
+      # Migrations are additive and wrangler records which have already run,
+      # so this is safe on every push.
       - name: Apply database migrations
         run: npx wrangler d1 migrations apply togetherly --remote
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: Deploy Worker
+      - name: Deploy
         run: npx wrangler deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
